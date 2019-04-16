@@ -31,5 +31,9 @@
     "slider",
     "carousel",
     "lightweight"
-  ]
+  ],
+  "dependencies": {
+    "jest": "^24.7.1",
+    "jest-cli": "^24.7.1"
+  }
 }
