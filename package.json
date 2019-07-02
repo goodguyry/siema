@@ -39,6 +39,12 @@
     "lightweight"
   ],
   "jest": {
-    "testEnvironment": "jsdom"
+    "testEnvironment": "jsdom",
+    "setupFiles": [
+      "<rootDir>/setupFile.js"
+    ]
+  },
+  "dependencies": {
+    "jsdom": "^15.1.1"
   }
 }
