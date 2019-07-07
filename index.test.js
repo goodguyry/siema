@@ -1,17 +1,40 @@
 import Siema from './src/siema';
 
-// Private methods
-// slideToCurrent(enableTransition)
+/**
+ * Helper for creating instances of TouchEvent.
+ *
+ * @param  {string} type        The event type.
+ * @param  {object} coordinates An object of touch points.
+ * @return {TouchEvent}
+ */
+function getTouchEvent(type, coordinates) {
+  const data = {
+    touches: [coordinates],
+    bubbles: true,
+    cancelable: true,
+  };
 
-// Events:
-// touchstart
-// touchend
-// touchmove
-// mousedown
-// mouseup
-// mouseleave
-// mousemove
-// click
+  return new TouchEvent(
+    type,
+    data,
+  );
+}
+
+/**
+ * Helper for patching missing pageX/pageY MouseEvent properties.
+ *
+ * @param  {string} type  The event type.
+ * @param  {object} props An object of additional MouseEvent properties.
+ * @return {MouseEvent}
+ */
+function getMouseEvent(type, props) {
+  const mouseEvent = new MouseEvent(type, {
+    bubbles: (type !== 'mouseleave'),
+    cancelable: true,
+  });
+
+  return Object.assign(mouseEvent, props);
+}
 
 describe('Transforms markup as expected', () => {
   // expectedWidth = (width / perPage) * slides
@@ -182,5 +205,124 @@ describe('Tests class methods', () => {
 
     expect(slides.innerHTML).toEqual('<li>Slide Zero</li><li>Slide One</li><li>Slide Two</li><li>Slide Three</li><li>Slide Four</li><li>Slide Five</li><li>Slide Six</li><li>Slide Seven</li><li>Slide Eight</li><li>Slide Nine</li>');
     expect(onDestroy).toHaveBeenCalled();
+  });
+});
+
+describe('Test and mouse events', () => {
+  // Set up our document body
+  document.body.innerHTML =
+    `<ul class="slides">
+      <li>Slide One</li>
+      <li>Slide Two</li>
+      <li>Slide Three</li>
+      <li>Slide Four</li>
+      <li>Slide Five</li>
+      <li>Slide Six</li>
+      <li>Slide Seven</li>
+      <li>Slide Eight</li>
+    </ul>`;
+
+  const slides = document.querySelector('.slides');
+  const onChange = jest.fn();
+
+  const carousel = new Siema({
+    selector: slides,
+    perPage: 3,
+    onChange,
+  });
+
+  test('Test touch events', () => {
+    const touchstart = getTouchEvent(
+      'touchstart',
+      {
+        pageX: 0,
+        pageY: 0,
+      }
+    );
+    carousel.selector.dispatchEvent(touchstart);
+
+    expect(carousel.pointerDown).toBeTruthy();
+    expect(carousel.drag.startX).toEqual(0);
+    expect(carousel.drag.startY).toEqual(0);
+
+    const touchmove = getTouchEvent(
+      'touchmove',
+      {
+        pageX: -50,
+        pageY: 20,
+      }
+    );
+    carousel.selector.dispatchEvent(touchmove);
+
+    expect(carousel.drag.endX).toEqual(-50);
+
+    const touchend = getTouchEvent(
+      'touchend',
+      []
+    );
+    carousel.selector.dispatchEvent(touchend);
+
+    expect(carousel.pointerDown).toBeFalsy();
+    expect(carousel.currentSlide).toEqual(1);
+    expect(onChange).toHaveBeenCalled();
+  });
+
+  test('Test click event', () => {
+    const click = new MouseEvent(
+      'click',
+      { bubbles: true }
+    );
+    carousel.selector.dispatchEvent(click);
+
+    expect(carousel.drag.preventClick).toBeFalsy();
+  });
+
+  test('Test mouse events', () => {
+    const mousedown = getMouseEvent(
+      'mousedown',
+      {
+        pageX: 10,
+        pageY: 0,
+      }
+    );
+    carousel.selector.dispatchEvent(mousedown);
+
+    expect(carousel.pointerDown).toBeTruthy();
+    expect(carousel.drag.startX).toEqual(10);
+
+    const mousemove = getMouseEvent(
+      'mousemove',
+      {
+        pageX: 50,
+        pageY: 0,
+      }
+    );
+    carousel.selector.dispatchEvent(mousemove);
+
+    expect(carousel.drag.endX).toEqual(50);
+
+    // Same result as `mouseleave``below.
+    // const mouseup = getMouseEvent('mouseup', {});
+    // carousel.selector.dispatchEvent(mouseup);
+
+    const mouseleave = getMouseEvent(
+      'mouseleave',
+      {
+        pageX: 50,
+        pageY: 0,
+      }
+    );
+    carousel.selector.dispatchEvent(mouseleave);
+
+    expect(carousel.pointerDown).toBeFalsy();
+    expect(carousel.currentSlide).toEqual(0);
+    expect(onChange).toHaveBeenCalled();
+
+    // clearDrag()
+    expect(carousel.drag.startX).toEqual(0);
+    expect(carousel.drag.endX).toEqual(0);
+    expect(carousel.drag.startY).toEqual(0);
+    expect(carousel.drag.letItGo).toBeNull();
+    expect(carousel.drag.preventClick).toBeFalsy();
   });
 });
