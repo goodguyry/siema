@@ -20,6 +20,7 @@
   },
   "scripts": {
     "test": "jest",
+    "watch": "jest --watchAll",
     "build": "webpack && cp dist/siema.min.js docs/assets",
     "dev": "webpack --progress --colors --watch"
   },
